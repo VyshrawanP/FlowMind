@@ -1,0 +1,50 @@
+services:
+  # 1. FlowMind WebSocket & API Backend
+  - type: web
+    name: flowmind-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run prisma:generate
+    startCommand: npx prisma db push && npm start
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flowmind-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: flowmind-redis
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false # Filled in by the user in Render UI on deploy
+      - key: GITHUB_TOKEN
+        sync: false # Optional, filled in by the user in Render UI
+
+  # 2. FlowMind Next.js Web Frontend
+  - type: web
+    name: flowmind-frontend
+    env: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: flowmind-backend
+          property: host
+
+# 3. Managed PostgreSQL Database Instance
+databases:
+  - name: flowmind-db
+    plan: free
+
+# 4. Managed Redis Pub/Sub Instance
+redis:
+  - name: flowmind-redis
+    plan: free

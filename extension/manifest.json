@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "FlowMind Clipper",
+  "version": "1.0.0",
+  "description": "Clip web selections directly to your FlowMind collaborative boards.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3001/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}

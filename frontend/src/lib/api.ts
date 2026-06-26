@@ -40,6 +40,12 @@ export interface Card {
   boardId: string;
   comments: Comment[];
   labels: CardLabel[];
+  githubIssueNumber: number | null;
+  githubRepoUrl: string | null;
+  complexity: number | null;
+  complexityReason: string | null;
+  assigneeId: string | null;
+  assignee: User | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -147,6 +153,9 @@ export async function createCard(data: {
   boardId: string;
   userId: string;
   labelIds?: string[];
+  complexity?: number;
+  complexityReason?: string;
+  assigneeId?: string;
 }): Promise<Card> {
   const res = await fetch(`${API_BASE_URL}/api/cards`, {
     method: 'POST',
@@ -165,6 +174,9 @@ export async function updateCard(cardId: string, data: {
   version?: number;
   userId: string;
   labelIds?: string[];
+  complexity?: number | null;
+  complexityReason?: string;
+  assigneeId?: string | null;
 }): Promise<Card> {
   const res = await fetch(`${API_BASE_URL}/api/cards/${cardId}`, {
     method: 'PUT',
@@ -184,4 +196,66 @@ export async function deleteCard(cardId: string, userId: string): Promise<void> 
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete card');
+}
+
+export async function importGithubIssues(
+  boardId: string,
+  repoUrl: string,
+  userId: string
+): Promise<{ success: boolean; message: string; imported: number; skipped: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/boards/${boardId}/github-import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repoUrl, userId }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to import GitHub issues');
+  }
+  return res.json();
+}
+
+export async function inferComplexity(
+  title: string,
+  description?: string
+): Promise<{ complexity: number; reasoning: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/cards/infer-complexity`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description }),
+  });
+  if (!res.ok) throw new Error('Failed to infer task complexity');
+  return res.json();
+}
+
+export async function triggerAiAnalysis(boardId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/boards/${boardId}/trigger-ai`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to trigger AI analysis');
+  return res.json();
+}
+
+export interface DigestReport {
+  id: string;
+  boardId: string;
+  title: string;
+  content: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+}
+
+export async function fetchDigestReports(boardId: string): Promise<DigestReport[]> {
+  const res = await fetch(`${API_BASE_URL}/api/boards/${boardId}/digest-reports`);
+  if (!res.ok) throw new Error('Failed to fetch digest reports');
+  return res.json();
+}
+
+export async function triggerDigestReport(boardId: string): Promise<DigestReport> {
+  const res = await fetch(`${API_BASE_URL}/api/boards/${boardId}/trigger-digest`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to trigger weekly digest generation');
+  return res.json();
 }
