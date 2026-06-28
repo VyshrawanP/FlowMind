@@ -41,6 +41,15 @@ export async function signup(req, res, next) {
     // Send verification OTP via email service
     await sendOtpEmail(newUser.email, otpCode, otpExpires);
 
+    // Create an audit activity log entry in PostgreSQL
+    await prisma.activityLog.create({
+      data: {
+        userId: newUser.id,
+        action: 'SIGNUP',
+        details: `Account registered successfully for ${email}.`
+      }
+    });
+
     return res.status(201).json({
       message: 'Account created. Verification OTP code sent to your email.',
       email: newUser.email,
@@ -86,7 +95,14 @@ export async function verifyOtp(req, res, next) {
       }
     });
 
-    // Generate JWT token
+    // Create an audit activity log entry in PostgreSQL
+    await prisma.activityLog.create({
+      data: {
+        userId: verifiedUser.id,
+        action: 'VERIFY_OTP',
+        details: `Account verified successfully via OTP.`
+      }
+    });
     const token = jwt.sign(
       { userId: verifiedUser.id, email: verifiedUser.email, role: verifiedUser.role },
       config.jwtSecret,
@@ -143,6 +159,15 @@ export async function login(req, res, next) {
       { expiresIn: '2h' }
     );
 
+    // Create an audit activity log entry in PostgreSQL
+    await prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        action: 'LOGIN',
+        details: 'User logged in successfully.'
+      }
+    });
+
     return res.json({
       message: 'Login successful.',
       token,
@@ -189,6 +214,15 @@ export async function resendOtp(req, res, next) {
 
     // Send new verification OTP via email service
     await sendOtpEmail(user.email, otpCode, otpExpires);
+
+    // Create an audit activity log entry in PostgreSQL
+    await prisma.activityLog.create({
+      data: {
+        userId: user.id,
+        action: 'RESEND_OTP',
+        details: 'User requested a new verification OTP.'
+      }
+    });
 
     return res.json({
       message: 'A new verification code has been sent to your email address.',
