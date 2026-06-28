@@ -16,7 +16,8 @@ export const config = {
   port: parseInt(process.env.PORT || '3001', 10),
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL || null,
-  groqApiKey: process.env.GROQ_API_KEY || null,
+   groqApiKey: process.env.GROQ_API_KEY || null,
+  groqBaseUrl: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
   githubToken: process.env.GITHUB_TOKEN || null,
   jwtSecret: process.env.JWT_SECRET || 'flowmind-super-secret-key-change-in-prod',
   smtp: {

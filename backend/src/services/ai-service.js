@@ -166,7 +166,8 @@ Write a narrative summary in clean markdown format:
     const apiKey = process.env.GROQ_API_KEY;
     if (apiKey) {
       console.log('Requesting Groq streaming completions...');
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const baseUrl = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
+      const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

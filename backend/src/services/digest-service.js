@@ -170,7 +170,8 @@ Write a professional narrative Weekly Digest Report in Markdown format:
     if (apiKey) {
       try {
         console.log('Fetching weekly digest narrative from Groq API...');
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const baseUrl = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
+        const response = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

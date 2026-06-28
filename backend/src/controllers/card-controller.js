@@ -37,7 +37,8 @@ export async function inferCardComplexity(req, res, next) {
   if (apiKey) {
     try {
       console.log(`Calling Groq API for complexity inference on task: "${title}"`);
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const baseUrl = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
+      const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
