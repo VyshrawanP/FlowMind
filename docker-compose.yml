@@ -35,7 +35,6 @@ services:
     restart: always
     ports:
       - "3001:3001"
-    command: sh -c "npx prisma db push && npm start"
     environment:
       NODE_ENV: production
       PORT: 3001

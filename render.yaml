@@ -1,12 +1,10 @@
 services:
-  # 1. FlowMind WebSocket & API Backend
+  # 1. FlowMind WebSocket & API Backend (Docker)
   - type: web
     name: flowmind-backend
-    env: node
+    env: docker
     plan: free
     rootDir: backend
-    buildCommand: npm install && npm run prisma:generate
-    startCommand: npx prisma db push && npm start
     envVars:
       - key: PORT
         value: 3001
@@ -20,18 +18,16 @@ services:
           name: flowmind-redis
           property: connectionString
       - key: GROQ_API_KEY
-        sync: false # Filled in by the user in Render UI on deploy
+        sync: false
       - key: GITHUB_TOKEN
-        sync: false # Optional, filled in by the user in Render UI
+        sync: false
 
-  # 2. FlowMind Next.js Web Frontend
+  # 2. FlowMind Next.js Web Frontend (Docker)
   - type: web
     name: flowmind-frontend
-    env: node
+    env: docker
     plan: free
     rootDir: frontend
-    buildCommand: npm run build
-    startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
         fromService:
