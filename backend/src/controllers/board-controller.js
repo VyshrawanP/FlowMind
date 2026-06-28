@@ -46,6 +46,10 @@ export async function getBoardById(req, res, next) {
           },
         },
         labels: true,
+        aiInsights: {
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        },
         activityLogs: {
           take: 50,
           orderBy: { createdAt: 'desc' },
