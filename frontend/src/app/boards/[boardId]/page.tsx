@@ -40,6 +40,7 @@ import {
   ChevronDown,
   Sparkles,
   Users,
+  Shield,
   User as UserIcon
 } from 'lucide-react';
 
@@ -320,9 +321,10 @@ export default function BoardPage({ params }: PageProps) {
 
   // Auth Guard & User Retrieval
   useEffect(() => {
+    const token = localStorage.getItem('flowmind_token');
     const storedUser = localStorage.getItem('flowmind_user');
-    if (!storedUser) {
-      router.push('/');
+    if (!token || !storedUser) {
+      router.push('/login');
       return;
     }
     setCurrentUser(JSON.parse(storedUser));
@@ -932,6 +934,16 @@ export default function BoardPage({ params }: PageProps) {
             <p className="text-[11px] text-zinc-400 font-medium">Real-time Kanban Sync Enabled</p>
           </div>
         </div>        <div className="flex items-center gap-3">
+          {/* Admin Panel button (only for ADMIN role) */}
+          {currentUser && currentUser.role === 'ADMIN' && (
+            <button
+              onClick={() => router.push('/admin')}
+              className="flex items-center gap-2 px-3.5 py-1.5 border border-indigo-900 bg-indigo-950/40 hover:bg-indigo-900/30 rounded-lg text-xs font-bold text-indigo-400 transition-all cursor-pointer hover:shadow-indigo-500/10"
+            >
+              <Shield className="h-3.5 w-3.5" /> Admin Panel
+            </button>
+          )}
+
           {/* AI Project Manager Toggle Button */}
           <button
             onClick={() => {

@@ -18,6 +18,21 @@ export const config = {
   redisUrl: process.env.REDIS_URL || null,
   groqApiKey: process.env.GROQ_API_KEY || null,
   githubToken: process.env.GITHUB_TOKEN || null,
+  jwtSecret: process.env.JWT_SECRET || 'flowmind-super-secret-key-change-in-prod',
+  smtp: {
+    host: process.env.SMTP_HOST || null,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || null,
+    pass: process.env.SMTP_PASS || null,
+    from: process.env.SMTP_FROM || 'FlowMind Security <noreply@flowmind.com>',
+  }
 };
+
+// Security check for production deployments
+if (config.env === 'production') {
+  if (config.jwtSecret === 'flowmind-super-secret-key-change-in-prod') {
+    console.warn('⚠️  SECURITY WARNING: Using default fallback JWT secret in production mode. Please define JWT_SECRET in your .env file!');
+  }
+}
 
 export default config;

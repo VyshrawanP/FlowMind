@@ -5,13 +5,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Create default user
   const user = await prisma.user.upsert({
     where: { email: 'vyshrawanp@example.com' },
     update: {},
     create: {
       email: 'vyshrawanp@example.com',
       name: 'Vyshrawan P',
+      passwordHash: '$2b$12$K.dCOF8wJlyN/n0C9JdG3.K41P.mR2.gX1N81tO.o.D6a2lXQ.Dpq', // Hashed value of "password"
+      role: 'ADMIN',
+      isVerified: true,
     },
   });
 
