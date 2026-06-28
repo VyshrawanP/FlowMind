@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
+import dns from 'dns';
 import config from '../config/index.js';
+
+// Force DNS resolution to prefer IPv4 first (resolves ENETUNREACH in containers without IPv6 routing)
+dns.setDefaultResultOrder('ipv4first');
 
 // Setup email configuration properties inside config
 const { host: smtpHost, port: smtpPort, user: smtpUser, pass: smtpPass, from: smtpFrom } = config.smtp;
