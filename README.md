@@ -1,4 +1,6 @@
-# 🌌 FlowMind: Real-Time Collaborative Kanban & Autonomous AI PM
+# 🌌 FlowMind
+
+### 🔗 Live Production Demo: [https://flowmind-frontend-production-e15c.up.railway.app/login](https://flowmind-frontend-production-e15c.up.railway.app/login)
 
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%2020-green?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015-black?style=flat-square&logo=next.js)](https://nextjs.org/)
@@ -7,20 +9,49 @@
 [![Cache](https://img.shields.io/badge/Queue-Redis-red?style=flat-square&logo=redis)](https://redis.io/)
 [![Deployment](https://img.shields.io/badge/Hosting-Railway-purple?style=flat-square&logo=railway)](https://railway.app)
 
-FlowMind is a production-grade, real-time collaborative project management workspace. Multiple users can manipulate Kanban boards simultaneously with instant updates, protected by Optimistic Concurrency version locks. An autonomous AI Project Manager runs in the background to detect team bottlenecks, predict sprint risks, estimate card complexity, and generate weekly digest summaries.
+> A modern, real-time collaborative Kanban workspace featuring an **Autonomous AI Project Manager** that audits board health, predicts sprint risks, estimates task complexity, and schedules weekly digests. Syncs with GitHub and features a Chrome extension to capture tasks from anywhere on the web.
 
 ---
 
-## 🏗 1. System Topology & Physical Architecture
+## 📸 Product Screenshots
 
-FlowMind is built using a monorepo architecture divided into four self-contained components:
+````carousel
+![Welcome Signin Screen](assets/images/signin_page_1782399378167.png)
+<!-- slide -->
+![Workspace Boards Dashboard](assets/images/boards_page_scrolled_1782399445898.png)
+<!-- slide -->
+![Board View After GitHub Import](assets/images/github_imported_cards_1782402078404.png)
+<!-- slide -->
+![AI Project Manager Analysis completed](assets/images/ai_analysis_completed_1782403351696.png)
+<!-- slide -->
+![Weekly Digest Sidebar Panel (Formatted Markdown)](assets/images/weekly_digest_verified_1782405933833.png)
+````
 
-```
-FlowMind/
-├── backend/            # Express, Socket.io, Prisma (PostgreSQL), Redis
-├── frontend/           # Next.js (App Router, Tailwind CSS, DnD Kit)
-├── email-service-py/   # Python FastAPI SMTP/IMAP Mail Microservice
-└── extension/          # Chrome Extension Manifest V3 (Task Clipper)
+---
+
+## ✨ Key Features
+
+* ⚡ **Real-Time Collaboration**: Drag-and-drop cards and edit columns with instant synchronization across all active browser windows using Socket.io and Redis.
+* 🤖 **Autonomous AI Project Manager**: Powered by **Llama-3.3-70b via Groq**, our AI PM runs background checks to detect bottleneck columns, flag sprint risks, predict task complexity, and stream insights.
+* 🔒 **Optimistic UI & Concurrency**: Employs integer-based **Optimistic Concurrency Control (OCC)** to reject stale edits and prevent concurrent update overwrites.
+* 🐙 **GitHub Scraper**: Import issues directly from any public GitHub repository with automatic label mapping, assignee resolution, pagination, and deduplication.
+* 🧩 **Chrome Extension**: Clip highlight snippets, full-page summaries, and URLs from any website straight into your Kanban boards in real time.
+* 🐍 **Python Mail Microservice**: A dedicated FastAPI worker that handles SMTP/IMAP verification protocols and parses OTPs using Regex for E2E tests.
+* ✉️ **Brevo HTTPS REST Bypass**: Integrates Brevo's HTTPS REST API over port `443` to bypass cloud firewalls and send emails to any recipient without requiring a custom domain.
+
+---
+
+## 🏗 System Architecture
+
+```mermaid
+graph TD
+    Client[Next.js Web Client] <-->|1. Real-Time Sockets| SocketServer[Express + Socket.io Server]
+    ChromeExt[Chrome Task Clipper] -->|2. HTTP POST /api/cards| SocketServer
+    SocketServer <-->|3. Pub/Sub Synced| Redis[Redis Queue Adapter]
+    SocketServer <-->|4. Database Schema| Postgres[(PostgreSQL DB)]
+    SocketServer -->|5. HTTP POST /send-otp| PyMail[Python FastAPI Mail Worker]
+    PyMail -->|6. Deliver OTP| UserInbox[User Mail Inbox]
+    SocketServer -->|7. API Inference| Groq[Groq Llama-3.3-70b]
 ```
 
 ### Detailed Network Topology
@@ -85,7 +116,7 @@ graph TD
 
 ---
 
-## 🔒 2. Concurrency Control & Conflict Resolution (OCC)
+## 🔒 Concurrency Control & Conflict Resolution (OCC)
 
 FlowMind implements **Optimistic Concurrency Control (OCC)** using integer versioning. This guarantees that concurrent operations on the same task card (e.g. User A editing details while User B drags the card to another column) are resolved atomically without database corruption or silent overrides.
 
@@ -123,7 +154,7 @@ sequenceDiagram
 
 ---
 
-## 🤖 3. Autonomous AI Project Manager
+## 🤖 AI Project Manager & Scheduling
 
 The background AI PM agent acts as a virtual Scrum Master, analyzing boards on a configurable schedule:
 

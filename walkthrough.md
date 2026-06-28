@@ -28,33 +28,33 @@ FlowMind is a complete, production-ready, real-time collaborative Kanban board i
 Below are the screenshots and recordings detailing the verified application flows:
 
 ```carousel
-![Welcome Signin Screen](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/signin_page_1782399378167.png)
+![Welcome Signin Screen](assets/images/signin_page_1782399378167.png)
 <!-- slide -->
-![Workspace Boards Dashboard](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/boards_page_scrolled_1782399445898.png)
+![Workspace Boards Dashboard](assets/images/boards_page_scrolled_1782399445898.png)
 <!-- slide -->
-![Board View After GitHub Import](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/github_imported_cards_1782402078404.png)
+![Board View After GitHub Import](assets/images/github_imported_cards_1782402078404.png)
 <!-- slide -->
-![AI Project Manager Analysis completed](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/ai_analysis_completed_1782403351696.png)
+![AI Project Manager Analysis completed](assets/images/ai_analysis_completed_1782403351696.png)
 <!-- slide -->
-![Weekly Digest Sidebar Panel (Formatted Markdown)](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/weekly_digest_verified_1782405933833.png)
+![Weekly Digest Sidebar Panel (Formatted Markdown)](assets/images/weekly_digest_verified_1782405933833.png)
 ```
 
 Here are the complete screen recordings of the automated verification runs:
 
 * **Phase 5 Verification Run (Markdown Formatted Drawer)**:
-![Verification Flow Phase 5](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/weekly_digest_markdown_test_1782405849541.webp)
+![Verification Flow Phase 5](assets/images/weekly_digest_markdown_test_1782405849541.webp)
 
 * **Phase 4 Weekly Digest Compilation Flow (Original Drawer)**:
-![Verification Flow Phase 4](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/weekly_digest_test_1782405400638.webp)
+![Verification Flow Phase 4](assets/images/weekly_digest_test_1782405400638.webp)
 
 * **Phase 3 AI Project Manager Stream Flow**:
-![Verification Flow Phase 3](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/ai_insights_verify_1782403297076.webp)
+![Verification Flow Phase 3](assets/images/ai_insights_verify_1782403297076.webp)
 
 * **Phase 2 GitHub Importer Flow**:
-![Verification Flow Phase 2](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/github_import_verify_1782401976872.webp)
+![Verification Flow Phase 2](assets/images/github_import_verify_1782401976872.webp)
 
 * **Phase 1 Verification Flow**:
-![Verification Flow Phase 1](/Users/vyshrawanp/.gemini/antigravity-ide/brain/d2e14182-42b4-471c-adab-8a3f033988a0/board_load_verify_1782399245939.webp)
+![Verification Flow Phase 1](assets/images/board_load_verify_1782399245939.webp)
 
 ---
 
@@ -68,7 +68,7 @@ Executing `npm run test:concurrency` in the `backend` directory demonstrates pro
 Backend URL: http://localhost:3001
 Simulated Users (Connections): 10
 Races Rounds: 5 (Total of 50 simultaneous moves)
-==================================================
+=================================================
 Using Board: "My Workspace Board" (6c19df59-fe37-4c4d-aff6-64449931fdfa)
 Using Card: "Setup Socket.io with Redis adapter" (af0dc552-d8eb-4699-9f18-246393115aa7)
 Columns: "To Do" (076c44d8-fbfd-48e3-9bc8-94631bfbe55f) ↔ "In Progress" (89132460-be06-4fc4-952d-e376165c4200)
