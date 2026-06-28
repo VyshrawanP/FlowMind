@@ -9,11 +9,14 @@ const { host: smtpHost, port: smtpPort, user: smtpUser, pass: smtpPass, from: sm
 
 let transporter = null;
 
-// Determine if we should use Resend's HTTP API instead of SMTP
+// Determine which HTTP REST API to use to bypass SMTP port blocks
 const isResend = smtpHost && (smtpHost.includes('resend') || smtpUser === 'resend');
+const isBrevo = smtpHost && (smtpHost.includes('brevo') || smtpHost.includes('sendinblue'));
 
 if (isResend) {
   console.log(`✉️  Resend detected. FlowMind will use HTTPS REST API (Port 443) for firewalled cloud environments.`);
+} else if (isBrevo) {
+  console.log(`✉️  Brevo detected. FlowMind will use HTTPS REST API (Port 443) for firewalled cloud environments.`);
 } else if (smtpHost && smtpUser && smtpPass) {
   transporter = nodemailer.createTransport({
     host: smtpHost,
@@ -92,7 +95,50 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
     }
   }
 
-  // 2. Direct HTTPS API delivery for Resend
+  // 2. Direct HTTPS API delivery for Brevo
+  if (isBrevo && smtpPass) {
+    try {
+      // Parse sender name and email from "Name <email>" format
+      let senderEmail = smtpFrom || 'noreply@flowmind.com';
+      let senderName = 'FlowMind Security';
+      if (senderEmail.includes('<') && senderEmail.includes('>')) {
+        const match = senderEmail.match(/^(.*?)\s*<(.*?)>$/);
+        if (match) {
+          senderName = match[1].trim();
+          senderEmail = match[2].trim();
+        }
+      }
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'api-key': smtpPass,
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: toEmail }],
+          subject: subject,
+          htmlContent: htmlContent,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ Real OTP email sent successfully via Brevo HTTPS API to: ${toEmail}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Brevo HTTP API rejected email:`, errorText);
+        return false;
+      }
+    } catch (error) {
+      console.error(`❌ Failed to send email via Brevo HTTPS API:`, error.message);
+      return false;
+    }
+  }
+
+  // 3. Direct HTTPS API delivery for Resend
   if (isResend && smtpPass) {
     try {
       const response = await fetch('https://api.resend.com/emails', {
@@ -123,7 +169,7 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
     }
   }
 
-  // 3. Standard SMTP delivery for other hosts
+  // 4. Standard SMTP delivery for other hosts
   if (transporter) {
     try {
       await transporter.sendMail({
