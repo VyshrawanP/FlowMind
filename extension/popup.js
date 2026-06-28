@@ -139,8 +139,37 @@ document.addEventListener('DOMContentLoaded', () => {
     loginPasswordInput.value = '';
   });
 
+  // Helper: Try to extract token automatically from any active FlowMind browser tabs
+  async function autoSyncTokenFromBrowser() {
+    try {
+      const tabs = await chrome.tabs.query({});
+      const flowMindTab = tabs.find(t => 
+        t.url && (t.url.includes('localhost:3000') || t.url.includes('up.railway.app'))
+      );
+
+      if (flowMindTab) {
+        const [{ result }] = await chrome.scripting.executeScript({
+          target: { tabId: flowMindTab.id },
+          func: () => localStorage.getItem('flowmind_token')
+        });
+
+        if (result) {
+          console.log('Successfully synced token from open FlowMind tab!');
+          await chrome.storage.local.set({ jwtToken: result });
+          return result;
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-sync from active browser tab failed:', e.message);
+    }
+    return null;
+  }
+
   // Initialize
   async function init() {
+    // Attempt to auto-sync the login token from open browser tabs first!
+    await autoSyncTokenFromBrowser();
+
     // 1. Get current tab URL and title
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -196,6 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Fetch users
       const usersRes = await fetchWithAuth(`${currentApiUrl}/api/users`);
+      
+      if (usersRes.status === 401 || usersRes.status === 403) {
+        // Session expired or token invalid: auto-logout
+        await chrome.storage.local.remove(['jwtToken', 'reporterUserId']);
+        loginForm.style.display = 'block';
+        mainForm.style.display = 'none';
+        logoutBtn.style.display = 'none';
+        showStatus('Session expired. Please log in again.', 'error');
+        return;
+      }
+
       if (!usersRes.ok) throw new Error('Could not fetch users list');
       allUsers = await usersRes.json();
 
