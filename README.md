@@ -15,17 +15,20 @@
 
 ## 📸 Product Screenshots
 
-````carousel
+### Sign In Screen
 ![Welcome Signin Screen](assets/images/signin_page_1782399378167.png)
-<!-- slide -->
+
+### Workspace Dashboard
 ![Workspace Boards Dashboard](assets/images/boards_page_scrolled_1782399445898.png)
-<!-- slide -->
+
+### Kanban Board Workspace (GitHub Imported)
 ![Board View After GitHub Import](assets/images/github_imported_cards_1782402078404.png)
-<!-- slide -->
+
+### AI PM Telemetry insights
 ![AI Project Manager Analysis completed](assets/images/ai_analysis_completed_1782403351696.png)
-<!-- slide -->
+
+### Weekly Executive Digests
 ![Weekly Digest Sidebar Panel (Formatted Markdown)](assets/images/weekly_digest_verified_1782405933833.png)
-````
 
 ---
 

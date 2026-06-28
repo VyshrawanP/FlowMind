@@ -27,17 +27,22 @@ FlowMind is a complete, production-ready, real-time collaborative Kanban board i
 
 Below are the screenshots and recordings detailing the verified application flows:
 
-```carousel
+### Sign In Screen
 ![Welcome Signin Screen](assets/images/signin_page_1782399378167.png)
-<!-- slide -->
+
+### Workspace Dashboard
 ![Workspace Boards Dashboard](assets/images/boards_page_scrolled_1782399445898.png)
-<!-- slide -->
+
+### Kanban Board Workspace (GitHub Imported)
 ![Board View After GitHub Import](assets/images/github_imported_cards_1782402078404.png)
-<!-- slide -->
+
+### AI PM Telemetry Insights
 ![AI Project Manager Analysis completed](assets/images/ai_analysis_completed_1782403351696.png)
-<!-- slide -->
+
+### Weekly Executive Digests
 ![Weekly Digest Sidebar Panel (Formatted Markdown)](assets/images/weekly_digest_verified_1782405933833.png)
-```
+
+---
 
 Here are the complete screen recordings of the automated verification runs:
 
@@ -68,7 +73,7 @@ Executing `npm run test:concurrency` in the `backend` directory demonstrates pro
 Backend URL: http://localhost:3001
 Simulated Users (Connections): 10
 Races Rounds: 5 (Total of 50 simultaneous moves)
-=================================================
+==================================================
 Using Board: "My Workspace Board" (6c19df59-fe37-4c4d-aff6-64449931fdfa)
 Using Card: "Setup Socket.io with Redis adapter" (af0dc552-d8eb-4699-9f18-246393115aa7)
 Columns: "To Do" (076c44d8-fbfd-48e3-9bc8-94631bfbe55f) ↔ "In Progress" (89132460-be06-4fc4-952d-e376165c4200)
