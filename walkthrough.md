@@ -120,9 +120,11 @@ Conflict Denials Caught:   45 (expected exactly 45)
 Unresolved Errors:         0 (expected 0)
 
 🏆 SUCCESS: Concurrency conflict resolution verified!
-Last-Write-Wins locks rejected all out-of-date updates.
 ==================================================
 ```
+
+### Concurrency Stress Test CLI Output
+![Concurrency Stress Test CLI Output](assets/images/Screenshot%202026-06-28%20at%209.50.51%20PM.png)
 
 ---
 

@@ -30,6 +30,9 @@
 ### Weekly Executive Digests
 ![Weekly Digest Sidebar Panel (Formatted Markdown)](assets/images/weekly_digest_verified_1782405933833.png)
 
+### Concurrency Stress Test CLI Output (10 Sockets, 50 Moves)
+![Concurrency Test Output](assets/images/Screenshot%202026-06-28%20at%209.50.51%20PM.png)
+
 ---
 
 ## ✨ Key Features
