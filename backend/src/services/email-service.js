@@ -2,15 +2,19 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import config from '../config/index.js';
 
-// Force DNS resolution to prefer IPv4 first (resolves ENETUNREACH in containers without IPv6 routing)
+// Force DNS resolution to prefer IPv4 first
 dns.setDefaultResultOrder('ipv4first');
 
-// Setup email configuration properties inside config
 const { host: smtpHost, port: smtpPort, user: smtpUser, pass: smtpPass, from: smtpFrom } = config.smtp;
 
 let transporter = null;
 
-if (smtpHost && smtpUser && smtpPass) {
+// Determine if we should use Resend's HTTP API instead of SMTP
+const isResend = smtpHost && (smtpHost.includes('resend') || smtpUser === 'resend');
+
+if (isResend) {
+  console.log(`✉️  Resend detected. FlowMind will use HTTPS REST API (Port 443) for firewalled cloud environments.`);
+} else if (smtpHost && smtpUser && smtpPass) {
   transporter = nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
@@ -19,7 +23,7 @@ if (smtpHost && smtpUser && smtpPass) {
       user: smtpUser,
       pass: smtpPass,
     },
-    family: 4, // Force IPv4 to prevent ENETUNREACH errors in container networks
+    family: 4,
   });
   console.log(`✉️  SMTP Email Transporter configured successfully: ${smtpHost}:${smtpPort}`);
 } else {
@@ -52,13 +56,45 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
     </div>
   `;
 
-  // Output to console log ALWAYS (useful for local sandbox verification)
+  // Output to console log ALWAYS (useful for verification)
   console.log(`===============================================`);
   console.log(`✉️  SECURITY OTP GENERATED FOR ${toEmail.toUpperCase()}`);
   console.log(`👉  Verification Code: ${otpCode}`);
   console.log(`⏱️  Expires at: ${expiresAt.toLocaleTimeString()}`);
   console.log(`===============================================`);
 
+  // 1. Direct HTTPS API delivery for Resend
+  if (isResend && smtpPass) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${smtpPass}`,
+        },
+        body: JSON.stringify({
+          from: smtpFrom || 'FlowMind Security <onboarding@resend.dev>',
+          to: [toEmail],
+          subject: subject,
+          html: htmlContent,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ Real OTP email sent successfully via Resend HTTPS API to: ${toEmail}`);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Resend HTTP API rejected email:`, errorText);
+        return false;
+      }
+    } catch (error) {
+      console.error(`❌ Failed to send email via Resend HTTPS API:`, error.message);
+      return false;
+    }
+  }
+
+  // 2. Standard SMTP delivery for other hosts
   if (transporter) {
     try {
       await transporter.sendMail({
@@ -68,10 +104,10 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
         text: textContent,
         html: htmlContent
       });
-      console.log(`✅ Real OTP email sent successfully to: ${toEmail}`);
+      console.log(`✅ Real OTP email sent successfully via SMTP to: ${toEmail}`);
       return true;
     } catch (error) {
-      console.error(`❌ Failed to send real OTP email to ${toEmail}:`, error.message);
+      console.error(`❌ Failed to send real OTP email via SMTP to ${toEmail}:`, error.message);
       return false;
     }
   }
