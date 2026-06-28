@@ -371,7 +371,8 @@ export default function BoardPage({ params }: PageProps) {
       await loadDigestReports();
     } catch (error) {
       console.error('Error loading board:', error);
-      addToast('Failed to load board details. Verify database connections.', 'error');
+      // Redirect back to the workspace dashboard if the board ID doesn't exist
+      router.push('/');
     } finally {
       setIsLoading(false);
     }
