@@ -371,8 +371,7 @@ export default function BoardPage({ params }: PageProps) {
       await loadDigestReports();
     } catch (error) {
       console.error('Error loading board:', error);
-      // Redirect back to the workspace dashboard if the board ID doesn't exist
-      router.push('/');
+      // do nothing on load failure
     } finally {
       setIsLoading(false);
     }
