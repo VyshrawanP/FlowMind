@@ -690,7 +690,8 @@ export default function BoardPage({ params }: PageProps) {
 
       // Connect EventSource to SSE stream channel
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const eventSource = new EventSource(`${API_BASE_URL}/api/boards/${board.id}/ai-stream`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('flowmind_token') || '' : '';
+      const eventSource = new EventSource(`${API_BASE_URL}/api/boards/${board.id}/ai-stream?token=${encodeURIComponent(token)}`);
 
       eventSource.onmessage = (event) => {
         if (event.data === '[DONE]') {
