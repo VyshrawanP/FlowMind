@@ -15,6 +15,7 @@ if (smtpHost && smtpUser && smtpPass) {
       user: smtpUser,
       pass: smtpPass,
     },
+    family: 4, // Force IPv4 to prevent ENETUNREACH errors in container networks
   });
   console.log(`✉️  SMTP Email Transporter configured successfully: ${smtpHost}:${smtpPort}`);
 } else {
