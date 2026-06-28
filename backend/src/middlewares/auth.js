@@ -5,7 +5,8 @@ import prisma from '../db.js';
 export async function authenticateToken(req, res, next) {
   // Auto-authenticate request if it originates from the Chrome Extension popup
   const origin = req.headers['origin'] || '';
-  if (origin.startsWith('chrome-extension://')) {
+  const referer = req.headers['referer'] || '';
+  if (origin.startsWith('chrome-extension://') || referer.startsWith('chrome-extension://')) {
     const adminUser = await prisma.user.findFirst({
       where: { role: 'ADMIN' }
     });
