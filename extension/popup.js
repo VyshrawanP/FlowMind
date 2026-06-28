@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const configPanel = document.getElementById('configPanel');
   const toggleConfigBtn = document.getElementById('toggleConfig');
   const saveConfigBtn = document.getElementById('saveConfig');
-  const logoutBtn = document.getElementById('logoutBtn');
 
   const boardSelect = document.getElementById('boardSelect');
   const columnSelect = document.getElementById('columnSelect');
@@ -19,14 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSpinner = document.getElementById('btnSpinner');
   const btnText = document.getElementById('btnText');
   
-  // Login Panel Elements
-  const loginForm = document.getElementById('loginForm');
+  // Auth Required & Main Form Panels
+  const authRequired = document.getElementById('authRequired');
   const mainForm = document.getElementById('mainForm');
-  const loginEmailInput = document.getElementById('loginEmail');
-  const loginPasswordInput = document.getElementById('loginPassword');
-  const loginBtn = document.getElementById('loginBtn');
-  const loginBtnText = document.getElementById('loginBtnText');
-  const loginSpinner = document.getElementById('loginSpinner');
   const statusMessage = document.getElementById('statusMessage');
 
   let currentTab = null;
@@ -68,76 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     return fetch(url, { ...options, headers });
   }
-
-  // Handle Login
-  loginBtn.addEventListener('click', async () => {
-    const email = loginEmailInput.value.trim();
-    const password = loginPasswordInput.value.trim();
-
-    if (!email || !password) {
-      showStatus('Email and password are required.', 'error');
-      return;
-    }
-
-    try {
-      loginBtn.disabled = true;
-      loginSpinner.style.display = 'block';
-      loginBtnText.textContent = 'Logging in...';
-      showStatus('Authenticating with FlowMind...', 'info');
-
-      const loginRes = await fetch(`${currentApiUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!loginRes.ok) {
-        const err = await loginRes.json();
-        throw new Error(err.message || 'Login failed. Verify credentials.');
-      }
-
-      const loginData = await loginRes.json();
-      
-      // Save details to extension storage
-      await chrome.storage.local.set({
-        jwtToken: loginData.token,
-        reporterUserId: loginData.user.id
-      });
-
-      showStatus('Successfully authenticated!', 'success');
-      
-      // Toggle views
-      loginForm.style.display = 'none';
-      mainForm.style.display = 'block';
-      logoutBtn.style.display = 'block';
-
-      // Load board selections
-      loadBoardsAndUsers(loginData.user.id);
-    } catch (e) {
-      console.error(e);
-      showStatus(`Login Failed: ${e.message}`, 'error');
-    } finally {
-      loginBtn.disabled = false;
-      loginSpinner.style.display = 'none';
-      loginBtnText.textContent = 'Log In to FlowMind';
-    }
-  });
-
-  // Handle Logout
-  logoutBtn.addEventListener('click', async () => {
-    await chrome.storage.local.remove(['jwtToken', 'reporterUserId']);
-    showStatus('Logged out of extension session.', 'info');
-    
-    // Toggle UI back to login
-    loginForm.style.display = 'block';
-    mainForm.style.display = 'none';
-    logoutBtn.style.display = 'none';
-    configPanel.style.display = 'none';
-
-    // Clear credentials fields
-    loginEmailInput.value = '';
-    loginPasswordInput.value = '';
-  });
 
   // Helper: Try to extract token automatically from any active FlowMind browser tabs
   async function autoSyncTokenFromBrowser() {
@@ -201,19 +125,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (result.jwtToken) {
         // Authenticated session exists
-        loginForm.style.display = 'none';
+        authRequired.style.display = 'none';
         mainForm.style.display = 'block';
-        logoutBtn.style.display = 'block';
         loadBoardsAndUsers(result.reporterUserId);
       } else {
-        // Must login first
-        loginForm.style.display = 'block';
+        // Must log in to browser web app first
+        authRequired.style.display = 'block';
         mainForm.style.display = 'none';
-        logoutBtn.style.display = 'none';
       }
     } catch (e) {
       console.error('Initialization failed:', e);
-      showStatus('Initialization failed. Check API URL settings.', 'error');
+      showStatus('Initialization failed. Check settings.', 'error');
     }
   }
 
@@ -227,12 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const usersRes = await fetchWithAuth(`${currentApiUrl}/api/users`);
       
       if (usersRes.status === 401 || usersRes.status === 403) {
-        // Session expired or token invalid: auto-logout
+        // Session expired or token invalid: auto-lock and request login
         await chrome.storage.local.remove(['jwtToken', 'reporterUserId']);
-        loginForm.style.display = 'block';
+        authRequired.style.display = 'block';
         mainForm.style.display = 'none';
-        logoutBtn.style.display = 'none';
-        showStatus('Session expired. Please log in again.', 'error');
+        showStatus('Web session expired. Please log in to your web portal.', 'error');
         return;
       }
 
@@ -253,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hideStatus();
     } catch (e) {
       console.error('Failed fetching core data:', e);
-      showStatus(`Authorization expired or backend unreachable. Please verify settings.`, 'error');
+      showStatus(`Cannot connect to backend or session expired. Please verify settings.`, 'error');
     }
   }
 
