@@ -23,6 +23,7 @@ import aiStreamRouter from './routes/ai-stream.js';
 import cronRouter, { initCronJobs } from './services/cron.js';
 
 const app = express();
+app.set('trust proxy', 1); // Trust reverse proxies (Railway, Render, Cloudflare)
 const server = createServer(app);
 
 // Initialize Socket.io with Redis adapter
