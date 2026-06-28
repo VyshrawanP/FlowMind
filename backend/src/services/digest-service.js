@@ -177,7 +177,7 @@ Write a professional narrative Weekly Digest Report in Markdown format:
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: 'llama-3.3-70b',
+            model: 'llama-3.3-70b-versatile',
             messages: [
               { 
                 role: 'system', 

@@ -173,7 +173,7 @@ Write a narrative summary in clean markdown format:
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { 
               role: 'system', 
