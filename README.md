@@ -1,117 +1,255 @@
-# FlowMind — Real-Time Collaborative Kanban Board with Autonomous AI Project Manager
+# 🌌 FlowMind: Real-Time Collaborative Kanban & Autonomous AI PM
 
-FlowMind is a modern, real-time collaborative project management workspace. It features an automated, autonomous AI Project Manager that audits team velocity, detects development bottlenecks, predicts sprint completion risks, and compiles executive weekly summaries.
+[![Node.js](https://img.shields.io/badge/Backend-Node.js%2020-green?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/Microservice-Python%20FastAPI-blue?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-blue?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![Cache](https://img.shields.io/badge/Queue-Redis-red?style=flat-square&logo=redis)](https://redis.io/)
+[![Deployment](https://img.shields.io/badge/Hosting-Railway-purple?style=flat-square&logo=railway)](https://railway.app)
+
+FlowMind is a production-grade, real-time collaborative project management workspace. Multiple users can manipulate Kanban boards simultaneously with instant updates, protected by Optimistic Concurrency version locks. An autonomous AI Project Manager runs in the background to detect team bottlenecks, predict sprint risks, estimate card complexity, and generate weekly digest summaries.
 
 ---
 
-## 🏗 Real-Time Synchronization Architecture
+## 🏗 1. System Topology & Physical Architecture
 
-FlowMind uses a hybrid WebSocket and Redis architecture to achieve instant collaborative updates across multiple active browser sessions.
+FlowMind is built using a monorepo architecture divided into four self-contained components:
+
+```
+FlowMind/
+├── backend/            # Express, Socket.io, Prisma (PostgreSQL), Redis
+├── frontend/           # Next.js (App Router, Tailwind CSS, DnD Kit)
+├── email-service-py/   # Python FastAPI SMTP/IMAP Mail Microservice
+└── extension/          # Chrome Extension Manifest V3 (Task Clipper)
+```
+
+### Detailed Network Topology
 
 ```mermaid
 graph TD
-    Client1[Browser Tab 1] <-->|WebSockets| SocketServer[Express + Socket.io Server]
-    Client2[Browser Tab 2] <-->|WebSockets| SocketServer
-    SocketServer <-->|Pub/Sub Redis Adapter| Redis[Redis Cache & Pub/Sub]
-    SocketServer <-->|Prisma ORM| DB[(PostgreSQL Database)]
-```
+    subgraph Client Layer [Browser & Extension Clients]
+        BrowserA[Browser Window A - Next.js]
+        BrowserB[Browser Window B - Next.js]
+        ChromeExt[Chrome Extension - Popup + Background]
+    end
 
-### Key Components
-1. **WebSockets (Socket.io)**: Clients join board-specific rooms (`board:{boardId}`) immediately upon opening the workspace. All card dragging, column restructuring, and board operations are transmitted via socket events.
-2. **Redis Adapter**: Connects Socket.io instances using a Redis Pub/Sub backend. This allows FlowMind to scale horizontally across multiple node processes or host servers while maintaining unified event broadcasting.
-3. **Database Fallback**: In local development environments, if no `REDIS_URL` is set, the socket server falls back gracefully to standard in-memory socket adapters.
+    subgraph Router Layer [Load Balancer & Reverse Proxy]
+        Proxy[Railway Ingress / Reverse Proxy]
+    end
+
+    subgraph Application Cluster [Microservice Layer]
+        NodeServer1[Express Server 1]
+        NodeServer2[Express Server 2]
+        PyMail[Python FastAPI Email Worker]
+    end
+
+    subgraph Infrastructure Cache [State & Sync Replication]
+        RedisPubSub[(Redis Cache & Adapter)]
+    end
+
+    subgraph Database Layer [Persistence]
+        Postgres[(PostgreSQL Database)]
+    end
+
+    subgraph External APIs [External Service Nodes]
+        GroqAPI[Groq AI API - Llama-3.3-70b]
+        GithubAPI[GitHub Public API v3]
+        BrevoAPI[Brevo Email HTTP API]
+    end
+
+    %% Client Connections
+    BrowserA <-->|WebSockets | Proxy
+    BrowserB <-->|WebSockets | Proxy
+    ChromeExt -->|HTTP POST| Proxy
+
+    %% Proxy routing
+    Proxy <--> NodeServer1
+    Proxy <--> NodeServer2
+
+    %% Server cluster sync
+    NodeServer1 <-->|Pub/Sub Socket Sync| RedisPubSub
+    NodeServer2 <-->|Pub/Sub Socket Sync| RedisPubSub
+
+    %% Node DB & APIs
+    NodeServer1 <-->|Prisma ORM| Postgres
+    NodeServer2 <-->|Prisma ORM| Postgres
+    NodeServer1 -->|HTTP POST| GroqAPI
+    NodeServer1 -->|HTTP GET| GithubAPI
+    NodeServer1 -->|HTTP POST| BrevoAPI
+    
+    %% Python Mail Worker Connections
+    NodeServer1 -->|HTTP POST /send-otp| PyMail
+    PyMail -->|SSL Port 465| Gmail[Gmail / SMTP Server]
+    UserInbox[User Mailbox] <-->|SSL Port 993| PyMail
+```
 
 ---
 
-## 🔒 Concurrency Control & Conflict Resolution
+## 🔒 2. Concurrency Control & Conflict Resolution (OCC)
 
-FlowMind implements a robust **Optimistic UI with Last-Write-Wins (LWW) Version Locking** to handle multiple users updating cards simultaneously.
+FlowMind implements **Optimistic Concurrency Control (OCC)** using integer versioning. This guarantees that concurrent operations on the same task card (e.g. User A editing details while User B drags the card to another column) are resolved atomically without database corruption or silent overrides.
 
-### The Conflict Resolution Flow
-1. **Version Tracking**: Every `Card` in the database holds a `version` field (initialized to `0`).
-2. **Optimistic Dragging**: When a user drags a card, the frontend updates the layout instantly (optimistic state). It then emits a socket event `card:move` passing the version it has cached.
-3. **Atomic Verification**: The server performs an atomic check. If another user moved the card in the interim, the database `version` will be higher than the client's payload.
-4. **Rejection & Reversion**: The server rejects the outdated update, emits `card:move:failed` back to the sender, and broadcasts the current state. The sender's client displays a conflict toast and snaps the card back to its actual database position.
+### Sequence Flow: Concurrent Drag and Drop Update
 
-### Atomic Database Lock Implementation
-To completely prevent race conditions during highly concurrent requests (e.g. if two requests read the version simultaneously before the database UPDATE executes), FlowMind uses atomic PostgreSQL conditional updates:
+```mermaid
+sequenceDiagram
+    autonumber
+    actor UserA as User A (Browser)
+    actor UserB as User B (Browser)
+    participant Server as Socket.io Server (Express)
+    database DB as PostgreSQL DB
 
-```javascript
-// backend/src/socket.js
-const updateResult = await prisma.card.updateMany({
-  where: {
-    id: cardId,
-    version: version // Ensures update only happens if version matches the client's version
-  },
-  data: {
-    columnId,
-    position: parseFloat(position),
-    version: { increment: 1 } // Atomically increments version by 1
+    Note over UserA, UserB: Both users hold Card 42 (Version: 5)
+    
+    UserA->>UserA: Moves card to 'In Progress' (Optimistic UI)
+    UserA->>Server: Emit 'card:move' (Card ID: 42, Version: 5, Target: In Progress)
+    
+    UserB->>UserB: Moves card to 'Done' (Optimistic UI)
+    UserB->>Server: Emit 'card:move' (Card ID: 42, Version: 5, Target: Done)
+
+    Note over Server: Server processes User A first
+    Server->>DB: UPDATE Card SET columnId='In Progress', version=6 WHERE id=42 AND version=5
+    DB-->>Server: Success (1 row updated)
+    Server-->>UserA: Emit 'card:move:success' (Acknowledge)
+    Server->>UserB: Broadcast 'card:moved' (Card ID: 42, Version: 6, Col: In Progress)
+
+    Note over Server: Server processes User B
+    Server->>DB: UPDATE Card SET columnId='Done', version=6 WHERE id=42 AND version=5
+    DB-->>Server: Failed (0 rows updated - version mismatch)
+    Server-->>UserB: Emit 'card:move:failed' (Version Conflict)
+    UserB->>UserB: Revert Optimistic UI: Card snaps back to 'In Progress'
+    UserB->>UserB: Show Toast: "Conflict detected. Card state updated to latest version."
+```
+
+---
+
+## 🤖 3. Autonomous AI Project Manager
+
+The background AI PM agent acts as a virtual Scrum Master, analyzing boards on a configurable schedule:
+
+### 1. Bottleneck Scoring Methodology
+Every column's congestion index ($C$) is calculated by the background worker:
+$$C = \frac{\text{Cards Entered in Last 7 Days}}{\text{Cards Completed/Moved out in Last 7 Days}}$$
+* If $C \ge 1.5$ and column task counts exceed 5, a **bottleneck** is declared.
+* The AI is triggered with the board state, analyzing assignee work limits, labels, and dependencies to pinpoint the root cause (e.g. an overloaded assignee).
+
+### 2. Sprint Risk Assessment Mathematical Formula
+When a sprint deadline is set, the system calculates the required daily velocity ($V_{\text{req}}$) vs actual velocity ($V_{\text{act}}$):
+$$V_{\text{req}} = \frac{\text{Remaining Story Points on Board}}{\text{Days Left in Sprint}}$$
+$$V_{\text{act}} = \frac{\text{Story Points Completed in Last 7 Days}}{7}$$
+* **High Risk**: $V_{\text{act}} < 0.8 \times V_{\text{req}}$ (The team is moving too slowly to make the deadline).
+* **Medium Risk**: $0.8 \times V_{\text{req}} \le V_{\text{act}} < V_{\text{req}}$
+* **On Track**: $V_{\text{act}} \ge V_{\text{req}}$
+
+### 3. Task Complexity Inference
+Using **Groq Llama-3.3-70b**, the system analyzes the title, description, and tags when a card is created. It compares these with completed tasks and suggests a story point (1, 2, 3, 5, 8) with a written justification.
+
+---
+
+## 🗄️ 4. Database Schema Domain Model (Prisma)
+
+The application domain maps directly to PostgreSQL through the following relationship hierarchy:
+
+```
++---------------+      1:N      +---------------+      1:N      +---------------+
+|     User      |-------------->|  ActivityLog  |<--------------|     Board     |
++---------------+               +---------------+               +---------------+
+        |                                                               |
+        | 1:N (Owner)                                                   | 1:N
+        v                                                               v
++---------------+                                               +---------------+
+|     Board     |                                               |    Column     |
++---------------+                                               +---------------+
+        |                                                               |
+        | 1:N                                                           | 1:N
+        v                                                               v
++---------------+                                               +---------------+
+|    Column     |                                               |     Card      |
++---------------+                                               +---------------+
+```
+
+---
+
+## 📡 5. Key API Contracts
+
+### 🔐 Authentication
+
+#### 1. Registration (`POST /api/auth/signup`)
+* **Request**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "securepassword",
+    "name": "Alex Mercer"
   }
-});
+  ```
+* **Response (201 Created)**:
+  ```json
+  {
+    "message": "Account created. Verification OTP code sent to your email.",
+    "email": "user@example.com"
+  }
+  ```
 
-if (updateResult.count === 0) {
-  // Stale version: update failed. Resolve conflict and return failure.
+#### 2. OTP Verification (`POST /api/auth/verify-otp`)
+* **Request**:
+  ```json
+  {
+    "email": "user@example.com",
+    "otpCode": "123456"
+  }
+  ```
+* **Response (200 OK)**:
+  ```json
+  {
+    "message": "OTP verification successful. Account is active.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "547dff98-85f5-4c0c-9422-c3e3220b08a3",
+      "email": "user@example.com",
+      "name": "Alex Mercer",
+      "role": "USER"
+    }
+  }
+  ```
+
+---
+
+## 🧩 6. Chrome Extension Architecture
+
+The Chrome Extension is structured using Google Manifest V3 specifications. It clips page details and communicates directly with your backend:
+
+```mermaid
+graph LR
+    User[Select Text on Webpage] -->|Click Ext Icon| Popup[popup.js]
+    ActiveTab[content.js] -->|Scrape Selection & Title| Popup
+    Popup -->|HTTP POST /api/cards| CloudBackend[FlowMind Railway API]
+    CloudBackend -->|Socket.io Broadcast| WebApp[Next.js Client UI]
+```
+
+### Manifest Configuration (`manifest.json`)
+```json
+{
+  "manifest_version": 3,
+  "name": "FlowMind Clipper",
+  "version": "1.0",
+  "description": "Clip tasks from any webpage into your FlowMind Kanban boards.",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }
 ```
 
 ---
 
-## 🤖 AI Project Manager & Audit Schedules
+## 🚀 Installation & Local Development
 
-FlowMind integrates an autonomous project manager leveraging **Groq API (Llama-3.3-70b)** for intelligent sprint audits.
-
-### 1. Six-Hourly Board Audits (`0 */6 * * *`)
-Every 6 hours, background cron jobs scan active boards for:
-* **Bottleneck Detection**: Compares the rate of cards entering versus leaving each column over the past 7 days. If the entry rate outpaces exit rates by **1.5x**, the column is flagged as congested.
-* **Sprint Risk Indexing**: Analyzes velocity (cards moved to the final `Done` column per day). If the remaining task complexity outweighs the predicted team output within the sprint window, the board status is flagged as `HIGH_RISK`.
-* **Token Streaming**: Users can trigger manual status reports on-demand in the UI. These are calculated and streamed token-by-token using **Server-Sent Events (SSE)** via `/api/boards/:id/ai-stream`.
-
-### 2. Weekly Executive Summaries (`0 9 * * 1`)
-Scheduled every Monday at 9:00 AM, the AI compiles a detailed executive report outlining:
-1. **Weekly Velocity Trends**: Comparative metrics of tasks completed this week vs the previous week.
-2. **Bottlenecks**: A narrative identifying blocked columns and team assignees holding congested items.
-3. **Productivity Metrics**: Task completion rates grouped by assignee.
-4. **Digest Reports Storage**: Narratives are saved to the `DigestReport` database table and browsed in the client's **Weekly Digests** sliding drawer.
-
----
-
-## 📥 GitHub Issues Scraper
-
-FlowMind enables product managers to import software issues directly from public GitHub repositories into their boards.
-
-* **Pagination Handling**: Recursively fetches issues using standard cursor pagination (`page=N&per_page=100`) from the GitHub API until an empty result is returned.
-* **Label & Assignee Auto-Mapping**: Reads GitHub issue labels and matches them to existing board labels (creating new ones if missing). Map assignees to board user profiles by email/name searches.
-* **De-duplication Key**: Avoids duplicate card creations by using a unique compound constraints lock:
-  $$\text{dedupKey} = (\text{githubIssueNumber}, \text{githubRepoUrl}, \text{boardId})$$
-
----
-
-## 📊 Concurrent User Test Results
-
-FlowMind's real-time conflict handling was stressed under simulated heavy loads.
-
-### Test Environment
-* **Database**: PostgreSQL (v16)
-* **Backend**: Express + Socket.io (listening on port `3001`)
-* **Test Tool**: Custom Node script spawning 10 concurrent socket clients ([concurrent-test.js](file:///Users/vyshrawanp/Documents/FlowMind/backend/src/scripts/concurrent-test.js)).
-
-### Test Strategy
-* **Simulated Users**: 10 simultaneous WebSocket client connections.
-* **Stress Load**: 5 rounds of concurrent racing updates. In each round, all 10 clients attempt to move the *same* card to alternating target columns using the *same initial version* at the exact same millisecond (total of **50 simultaneous card move operations**).
-
-### Execution Results
-Run the test script in the backend directory:
-```bash
-npm run test:concurrency
-```
-
-| Metric | Result | Status |
-| :--- | :--- | :--- |
-| **Total Sockets Connected** | 10 | Connected |
-| **Total Moves Emitted** | 50 | Emitted |
-| **Successful Database Updates** | 5 | Expected (exactly 1 per round) |
-| **Conflict Denials Caught** | 45 | Expected (exactly 9 per round) |
-| **Unresolved / Server Errors** | 0 | Expected (0 failures) |
-
-**Conclusion**: The test verified that FlowMind successfully resolves concurrency racing. Stale client updates are cleanly rejected, keeping database states consistent and preventing client visual desynchronizations.
+Follow the step-by-step setup in the [Quick Start Guide](#quick-start--installation) above to run each service (Backend, Next.js Frontend, Python Mail Worker, Chrome Extension) locally.
