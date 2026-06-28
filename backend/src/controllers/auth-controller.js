@@ -11,7 +11,7 @@ function generateOtp() {
 
 export async function signup(req, res, next) {
   const { email, password, name } = req.body;
-  
+
   if (!email || !password) {
     return res.status(400).json({ error: 'ValidationError', message: 'Email and password are required.' });
   }
