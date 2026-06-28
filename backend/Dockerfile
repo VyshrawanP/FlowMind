@@ -1,8 +1,8 @@
-# Base image
-FROM node:20-alpine
+# Base image (Slim Debian node)
+FROM node:20-slim
 
-# Install OpenSSL for Prisma client library engine compatibility
-RUN apk add --no-cache openssl
+# Install OpenSSL if needed for Prisma engine
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +17,7 @@ RUN npm ci --only=production
 COPY prisma ./prisma
 COPY src ./src
 
-# Generate prisma client (so it is baked into the image)
+# Generate prisma client
 RUN npx prisma generate
 
 # Expose port (default 3001)
