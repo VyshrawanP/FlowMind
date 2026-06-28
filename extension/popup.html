@@ -289,9 +289,26 @@
       </select>
     </div>
     <button class="submit-btn" id="saveConfig" style="margin-top: 8px; padding: 6px;">Save Settings</button>
+    <button class="submit-btn" id="logoutBtn" style="margin-top: 8px; padding: 6px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: none;">Log Out</button>
   </div>
 
-  <div id="mainForm">
+  <!-- Login Panel -->
+  <div id="loginForm" style="display: none; animation: fadeIn 0.25s ease-out;">
+    <div class="form-group">
+      <label for="loginEmail">Email Address</label>
+      <input type="email" id="loginEmail" placeholder="E.g., name@example.com">
+    </div>
+    <div class="form-group">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter password">
+    </div>
+    <button class="submit-btn" id="loginBtn">
+      <div class="spinner" id="loginSpinner"></div>
+      <span id="loginBtnText">Log In to FlowMind</span>
+    </button>
+  </div>
+
+  <div id="mainForm" style="display: none;">
     <!-- Board & Column Selectors (Side-by-Side) -->
     <div class="form-group-row">
       <div>

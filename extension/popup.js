@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const configPanel = document.getElementById('configPanel');
   const toggleConfigBtn = document.getElementById('toggleConfig');
   const saveConfigBtn = document.getElementById('saveConfig');
+  const logoutBtn = document.getElementById('logoutBtn');
 
   const boardSelect = document.getElementById('boardSelect');
   const columnSelect = document.getElementById('columnSelect');
@@ -17,6 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = document.getElementById('submitBtn');
   const btnSpinner = document.getElementById('btnSpinner');
   const btnText = document.getElementById('btnText');
+  
+  // Login Panel Elements
+  const loginForm = document.getElementById('loginForm');
+  const mainForm = document.getElementById('mainForm');
+  const loginEmailInput = document.getElementById('loginEmail');
+  const loginPasswordInput = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginBtnText = document.getElementById('loginBtnText');
+  const loginSpinner = document.getElementById('loginSpinner');
   const statusMessage = document.getElementById('statusMessage');
 
   let currentTab = null;
@@ -44,7 +54,89 @@ document.addEventListener('DOMContentLoaded', () => {
     showStatus('Settings saved. Refreshing board details...', 'info');
     
     // Reload boards and users
-    loadBoardsAndUsers();
+    loadBoardsAndUsers(reporterId);
+  });
+
+  // Helper: Fetch with stored JWT Token
+  async function fetchWithAuth(url, options = {}) {
+    const result = await chrome.storage.local.get(['jwtToken']);
+    const headers = options.headers || {};
+    
+    if (result.jwtToken) {
+      headers['Authorization'] = `Bearer ${result.jwtToken}`;
+    }
+    
+    return fetch(url, { ...options, headers });
+  }
+
+  // Handle Login
+  loginBtn.addEventListener('click', async () => {
+    const email = loginEmailInput.value.trim();
+    const password = loginPasswordInput.value.trim();
+
+    if (!email || !password) {
+      showStatus('Email and password are required.', 'error');
+      return;
+    }
+
+    try {
+      loginBtn.disabled = true;
+      loginSpinner.style.display = 'block';
+      loginBtnText.textContent = 'Logging in...';
+      showStatus('Authenticating with FlowMind...', 'info');
+
+      const loginRes = await fetch(`${currentApiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!loginRes.ok) {
+        const err = await loginRes.json();
+        throw new Error(err.message || 'Login failed. Verify credentials.');
+      }
+
+      const loginData = await loginRes.json();
+      
+      // Save details to extension storage
+      await chrome.storage.local.set({
+        jwtToken: loginData.token,
+        reporterUserId: loginData.user.id
+      });
+
+      showStatus('Successfully authenticated!', 'success');
+      
+      // Toggle views
+      loginForm.style.display = 'none';
+      mainForm.style.display = 'block';
+      logoutBtn.style.display = 'block';
+
+      // Load board selections
+      loadBoardsAndUsers(loginData.user.id);
+    } catch (e) {
+      console.error(e);
+      showStatus(`Login Failed: ${e.message}`, 'error');
+    } finally {
+      loginBtn.disabled = false;
+      loginSpinner.style.display = 'none';
+      loginBtnText.textContent = 'Log In to FlowMind';
+    }
+  });
+
+  // Handle Logout
+  logoutBtn.addEventListener('click', async () => {
+    await chrome.storage.local.remove(['jwtToken', 'reporterUserId']);
+    showStatus('Logged out of extension session.', 'info');
+    
+    // Toggle UI back to login
+    loginForm.style.display = 'block';
+    mainForm.style.display = 'none';
+    logoutBtn.style.display = 'none';
+    configPanel.style.display = 'none';
+
+    // Clear credentials fields
+    loginEmailInput.value = '';
+    loginPasswordInput.value = '';
   });
 
   // Initialize
@@ -63,9 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
       sourceUrlDisplay.textContent = 'Unable to fetch tab details';
     }
 
-    // 2. Prefill description from highlighted text selection
+    // 2. Prefill description from highlighted text selection and check active JWT token
     try {
-      const result = await chrome.storage.local.get(['lastSelection', 'apiUrl', 'reporterUserId']);
+      const result = await chrome.storage.local.get(['lastSelection', 'apiUrl', 'reporterUserId', 'jwtToken']);
       
       if (result.lastSelection) {
         cardDescInput.value = result.lastSelection;
@@ -78,21 +170,32 @@ document.addEventListener('DOMContentLoaded', () => {
         apiUrlInput.value = currentApiUrl;
       }
 
-      // Start fetching boards and users
-      loadBoardsAndUsers(result.reporterUserId);
+      if (result.jwtToken) {
+        // Authenticated session exists
+        loginForm.style.display = 'none';
+        mainForm.style.display = 'block';
+        logoutBtn.style.display = 'block';
+        loadBoardsAndUsers(result.reporterUserId);
+      } else {
+        // Must login first
+        loginForm.style.display = 'block';
+        mainForm.style.display = 'none';
+        logoutBtn.style.display = 'none';
+      }
     } catch (e) {
       console.error('Initialization failed:', e);
-      showStatus('Initialization failed. Is the extension configured?', 'error');
+      showStatus('Initialization failed. Check API URL settings.', 'error');
     }
   }
 
-  // Load Boards & Users
+  // Load Boards & Users (requires fetchWithAuth)
   async function loadBoardsAndUsers(savedReporterId) {
     try {
       submitBtn.disabled = true;
+      showStatus('Loading workspace metadata...', 'info');
       
       // Fetch users
-      const usersRes = await fetch(`${currentApiUrl}/api/users`);
+      const usersRes = await fetchWithAuth(`${currentApiUrl}/api/users`);
       if (!usersRes.ok) throw new Error('Could not fetch users list');
       allUsers = await usersRes.json();
 
@@ -100,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
       populateUserDropdowns(allUsers, savedReporterId);
 
       // Fetch boards
-      const boardsRes = await fetch(`${currentApiUrl}/api/boards`);
+      const boardsRes = await fetchWithAuth(`${currentApiUrl}/api/boards`);
       if (!boardsRes.ok) throw new Error('Could not fetch boards list');
       const boards = await boardsRes.json();
 
@@ -110,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hideStatus();
     } catch (e) {
       console.error('Failed fetching core data:', e);
-      showStatus(`Connection failure: cannot connect to backend at ${currentApiUrl}`, 'error');
+      showStatus(`Authorization expired or backend unreachable. Please verify settings.`, 'error');
     }
   }
 
@@ -175,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
       columnSelect.innerHTML = '<option value="">Loading columns...</option>';
       columnSelect.disabled = true;
 
-      const res = await fetch(`${currentApiUrl}/api/columns?boardId=${boardId}`);
+      const res = await fetchWithAuth(`${currentApiUrl}/api/columns?boardId=${boardId}`);
       if (!res.ok) throw new Error('Failed to fetch columns');
       const columns = await res.json();
 
@@ -228,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus('Creating card...', 'info');
 
       // 1. Fetch column cards to determine the bottom fractional index position
-      const cardsRes = await fetch(`${currentApiUrl}/api/cards?columnId=${columnId}`);
+      const cardsRes = await fetchWithAuth(`${currentApiUrl}/api/cards?columnId=${columnId}`);
       if (!cardsRes.ok) throw new Error('Failed to get existing column cards');
       const cards = await cardsRes.json();
       
@@ -253,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-infer (AI) mode
         try {
           showStatus('AI is analyzing task complexity...', 'info');
-          const aiRes = await fetch(`${currentApiUrl}/api/cards/infer-complexity`, {
+          const aiRes = await fetchWithAuth(`${currentApiUrl}/api/cards/infer-complexity`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, description: finalDesc })
@@ -273,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 4. Create card
       showStatus('Saving card to Kanban Board...', 'info');
-      const createRes = await fetch(`${currentApiUrl}/api/cards`, {
+      const createRes = await fetchWithAuth(`${currentApiUrl}/api/cards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
