@@ -63,7 +63,36 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
   console.log(`⏱️  Expires at: ${expiresAt.toLocaleTimeString()}`);
   console.log(`===============================================`);
 
-  // 1. Direct HTTPS API delivery for Resend
+  // 1. Check if Python Mail Service is configured for delegation
+  const pythonServiceUrl = process.env.PYTHON_MAIL_SERVICE_URL;
+  if (pythonServiceUrl) {
+    try {
+      console.log(`✉️  Delegating OTP email sending to Python service: ${pythonServiceUrl}`);
+      const response = await fetch(`${pythonServiceUrl}/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: toEmail,
+          otp: otpCode,
+          expires_at: expiresAt.toLocaleTimeString(),
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`✅ OTP email successfully sent via Python service to: ${toEmail}`);
+        return true;
+      } else {
+        const errText = await response.text();
+        console.error(`❌ Python service rejected email:`, errText);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to connect to Python service:`, error.message);
+    }
+  }
+
+  // 2. Direct HTTPS API delivery for Resend
   if (isResend && smtpPass) {
     try {
       const response = await fetch('https://api.resend.com/emails', {
@@ -94,7 +123,7 @@ export async function sendOtpEmail(toEmail, otpCode, expiresAt) {
     }
   }
 
-  // 2. Standard SMTP delivery for other hosts
+  // 3. Standard SMTP delivery for other hosts
   if (transporter) {
     try {
       await transporter.sendMail({
