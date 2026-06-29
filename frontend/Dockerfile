@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # Define build argument for API URL
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ARG NEXT_PUBLIC_API_URL=https://flowmind-backend-production-e15c.up.railway.app
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Run build to generate .next directory
