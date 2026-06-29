@@ -689,7 +689,10 @@ export default function BoardPage({ params }: PageProps) {
       await triggerAiAnalysis(board.id);
 
       // Connect EventSource to SSE stream channel
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://flowmind-backend-production-e15c.up.railway.app';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+        (process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3001' 
+          : 'https://flowmind-backend-production-e15c.up.railway.app');
       const token = typeof window !== 'undefined' ? localStorage.getItem('flowmind_token') || '' : '';
       const eventSource = new EventSource(`${API_BASE_URL}/api/boards/${board.id}/ai-stream?token=${encodeURIComponent(token)}`);
 
