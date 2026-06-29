@@ -76,7 +76,7 @@ app.use('/api', cronRouter);
 // Centralized Error Handler (must be registered last)
 app.use(errorHandler);
 
-const PORT = config.port;
+const PORT = 3001;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`=================================================`);
