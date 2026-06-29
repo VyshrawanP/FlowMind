@@ -1,6 +1,6 @@
 # 🌌 FlowMind
 
-### 🔗 Live Production Demo: [https://flowmind-frontend-production-e15c.up.railway.app/login](https://flowmind-frontend-production-e15c.up.railway.app/login)
+### 🔗 Live Production Demo: [https://flowmind.up.railway.app/login](https://flowmind.up.railway.app/login)
 
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%2020-green?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015-black?style=flat-square&logo=next.js)](https://nextjs.org/)
