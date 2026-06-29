@@ -5,7 +5,7 @@
     "watchPatterns": ["src/**", "public/**", "package.json", "next.config.ts", "Dockerfile"]
   },
   "deploy": {
-    "startCommand": "next start -H 0.0.0.0 -p 3000",
+    "startCommand": "npm start",
     "healthcheckPath": "/login",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE"
