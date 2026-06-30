@@ -3,10 +3,6 @@ import prisma from '../db.js';
 
 const redisPub = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
-redisPub.on('error', (err) => {
-  console.error('Redis redisPub client error in ai-service:', err.message);
-});
-
 export async function runAiAnalysis(boardId) {
   const channel = `board:${boardId}:ai-stream`;
   console.log(`Starting AI analysis stream on Redis channel: ${channel}`);

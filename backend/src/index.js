@@ -78,7 +78,7 @@ app.use(errorHandler);
 
 const PORT = config.port;
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log(`=================================================`);
   console.log(`🚀 FlowMind Backend Server running on port ${PORT}`);
   console.log(`=================================================`);
