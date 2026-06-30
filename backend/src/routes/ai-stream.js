@@ -20,6 +20,10 @@ router.get('/:id/ai-stream', (req, res) => {
 
   // Instantiate separate Redis client for subscription channel
   const redisSub = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+  redisSub.on('error', (err) => {
+    console.error('Redis redisSub client error in ai-stream route:', err.message);
+  });
   const channel = `board:${boardId}:ai-stream`;
 
   console.log(`SSE Client connected to AI Stream for channel: ${channel}`);
