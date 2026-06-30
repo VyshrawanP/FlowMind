@@ -1,6 +1,10 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const rawSocketUrl = process.env.NEXT_PUBLIC_API_URL || 
+  (process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3001' 
+    : 'https://flowmind-backend-production-a16e.up.railway.app');
+const SOCKET_URL = rawSocketUrl.replace(/\/+$/, '');
 
 let socket: Socket | null = null;
 

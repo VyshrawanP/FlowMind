@@ -1,4 +1,8 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 
+  (process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3001' 
+    : 'https://flowmind-backend-production-a16e.up.railway.app');
+const API_BASE_URL = rawApiUrl.replace(/\/+$/, '');
 
 export interface User {
   id: string;
